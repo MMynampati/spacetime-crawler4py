@@ -43,6 +43,12 @@ def is_valid(url):
                 
         if not is_allowed:
             return False
+<<<<<<< HEAD
+=======
+        if len(url) > 200:
+            return False
+
+>>>>>>> swetha
 
         return not re.match(
             r".*\.(css|js|bmp|gif|jpe?g|ico"
