@@ -25,6 +25,28 @@ def is_valid(url):
         parsed = urlparse(url)
         if parsed.scheme not in set(["http", "https"]):
             return False
+            
+        # Check if the URL is within the domains we want to crawl
+        allowed_domains = [
+            ".ics.uci.edu",
+            ".cs.uci.edu",
+            ".informatics.uci.edu",
+            ".stat.uci.edu",
+            "today.uci.edu/department/information_computer_sciences"
+        ]
+        
+        is_allowed = any(parsed.netloc.endswith(domain) for domain in allowed_domains)
+        
+        if not is_allowed and parsed.netloc == "today.uci.edu":
+            if "/department/information_computer_sciences" in parsed.path:
+                is_allowed = True
+                
+        if not is_allowed:
+            return False
+        if len(url) > 200:
+            return False
+
+
         return not re.match(
             r".*\.(css|js|bmp|gif|jpe?g|ico"
             + r"|png|tiff?|mid|mp2|mp3|mp4"
