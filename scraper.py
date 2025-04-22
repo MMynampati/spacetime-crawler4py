@@ -1,7 +1,13 @@
 import re
 from urllib.parse import urlparse
+from bs4 import BeautifulSoup
+
 
 def scraper(url, resp):
+    if resp.status != 200:
+        print(f"Failed to retrieve {url} with status code {resp.status}, error: {resp.error}")
+        return []
+
     links = extract_next_links(url, resp)
     return [link for link in links if is_valid(link)]
 
@@ -15,7 +21,33 @@ def extract_next_links(url, resp):
     #         resp.raw_response.url: the url, again
     #         resp.raw_response.content: the content of the page!
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
-    return list()
+    extracted_links = []
+
+    try:
+        if resp.status != 200 or resp.raw_response is None or resp.raw_response.content is None:
+            return extracted_links
+
+        # Check if page is too large
+        if len(resp.raw_response.content) > 1000000:
+            print(f"Skipping large page: {url}")
+            return extracted_links
+
+        #  HTML content
+        soup = BeautifulSoup(resp.raw_response.content, 'html.parser')
+
+        # Extract all anchor tags
+        for anchor in soup.find_all('a'):
+            href = anchor.get('href')
+
+            if href:
+                absolute_link = urljoin(resp.url, href)
+                defragged_link, _ = urldefrag(absolute_link)
+                extracted_links.append(defragged_link)
+
+    except Exception as e:
+        print(f"Error processing {url}: {e}")
+
+    return extracted_links
 
 def is_valid(url):
     # Decide whether to crawl this url or not. 
