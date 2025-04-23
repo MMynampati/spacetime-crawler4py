@@ -2,6 +2,17 @@ import re
 from urllib.parse import urlparse
 
 def scraper(url, resp):
+    if resp.status != 200 or not resp.raw_response:
+        return []
+
+    defragged_url = urldefrag(resp.url)[0]
+    if defragged_url in visited_urls:
+        return []
+        
+    visited_urls.add(defragged_url)
+
+    extract_text_and_stats(resp, defragged_url) 
+    
     links = extract_next_links(url, resp)
     return [link for link in links if is_valid(link)]
 
