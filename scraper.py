@@ -15,7 +15,26 @@ def extract_next_links(url, resp):
     #         resp.raw_response.url: the url, again
     #         resp.raw_response.content: the content of the page!
     # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
-    return list()
+    links = []
+    if resp.status != 200 or resp.raw_response is None:
+        return links
+    
+    try:
+        content = resp.raw_response.content
+        soup = BeautifulSoup(content, 'html.parser')
+
+        for anchor in soup.find_all('a', href=True):
+            href = anchor['href']
+            full_url = urljoin(url, href) 
+            defragmented_url, _ = urldefrag(full_url)  
+            links.append(defragmented_url)
+
+    except Exception as e:
+        print(f"[extract_next_links] Error parsing {url}: {e}")
+
+
+
+    return links
 
 def is_valid(url):
     # Decide whether to crawl this url or not. 
