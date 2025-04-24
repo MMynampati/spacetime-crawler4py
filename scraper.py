@@ -1,5 +1,12 @@
 import re
 from urllib.parse import urlparse
+from urllib import robotparser
+
+
+visited_urls = set()
+path_counts = defaultdict(int)
+param_counts = defaultdict(int)
+
 
 def scraper(url, resp):
     links = extract_next_links(url, resp)
@@ -22,11 +29,15 @@ def extract_next_links(url, resp):
     try:
         content = resp.raw_response.content
         soup = BeautifulSoup(content, 'html.parser')
+        word_count, filtered_words = analyze_text_content(content)
 
         for anchor in soup.find_all('a', href=True):
             href = anchor['href']
             full_url = urljoin(url, href) 
             defragmented_url, _ = urldefrag(full_url)  
+            if is_trap(defragmented_url, visited_urls, path_counts):
+                continue
+
             links.append(defragmented_url)
 
     except Exception as e:
@@ -35,7 +46,26 @@ def extract_next_links(url, resp):
 
 
     return links
+    
+def is_trap(url, visited_urls=set(), path_counts={}, max_visits=30, max_depth=8):
+    if url in visited_urls:
+        return True
+    visited_urls.add(url)
+    parsed = urlparse(url)
+    segments = [s for s in parsed.path.split('/') if s]
 
+    if len(segments) > max_depth:
+        return True
+
+    # Normalize numeric parts to catch /page/1, /page/2
+    simplified = '/'.join(['N' if s.isdigit() else s for s in segments])
+    path_counts[simplified] = path_counts.get(simplified, 0) + 1
+    if path_counts[simplified] > max_visits:
+        return True
+
+    return False
+    
+    
 def is_valid(url):
     # Decide whether to crawl this url or not. 
     # If you decide to crawl it, return True; otherwise return False.
@@ -62,12 +92,10 @@ def is_valid(url):
                 
         if not is_allowed:
             return False
-<<<<<<< HEAD
-=======
+            
         if len(url) > 200:
             return False
 
->>>>>>> swetha
 
         return not re.match(
             r".*\.(css|js|bmp|gif|jpe?g|ico"
