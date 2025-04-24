@@ -62,6 +62,7 @@ def is_valid(url):
                 
         if not is_allowed:
             return False
+            
         if len(url) > 200:
             return False
 
