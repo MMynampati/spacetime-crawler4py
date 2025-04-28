@@ -9,7 +9,7 @@ from typing import List
 visited_urls = set()
 path_counts = defaultdict(int)
 param_counts = defaultdict(int)
-
+visited_pages_dicts = []
 
 def scraper(url, resp):
     links = extract_next_links(url, resp)
@@ -28,12 +28,26 @@ def extract_next_links(url, resp):
     links = []
     if resp.status != 200 or resp.raw_response is None:
         return links
-    
     try:
         content = resp.raw_response.content
         soup = BeautifulSoup(content, 'html.parser')
-        #word_count, filtered_words = analyze_text_content(content)
 
+        #check for dup/near-dup
+        text_content = soup.get_text()
+        tokens = tokenize(text_content)
+        freqs  = computeWordFrequencies(tokens)
+        
+        for freq_dict in visited_pages_dicts:
+            score = normalized_word_frequencies_difference(freq_dict, freqs)
+            if score >= 0.95:
+                print("found dup or near-dup")
+                return links
+
+        visited_pages_dicts.append(freqs)    
+
+        #word_count, filtered_words = analyze_text_content(content)
+        
+       
         for anchor in soup.find_all('a', href=True):
             href = anchor['href']
             full_url = urljoin(url, href) 
@@ -43,10 +57,12 @@ def extract_next_links(url, resp):
 
             links.append(defragmented_url)
 
+
     except Exception as e:
         print(f"[extract_next_links] Error parsing {url}: {e}")
 
     return links
+
 
 def analyze_text_content(content):
     pass
