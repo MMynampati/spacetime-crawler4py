@@ -1,6 +1,9 @@
 import re
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin, urldefrag
 from urllib import robotparser
+from collections import defaultdict
+from bs4 import BeautifulSoup
+from typing import List
 
 
 visited_urls = set()
@@ -29,7 +32,7 @@ def extract_next_links(url, resp):
     try:
         content = resp.raw_response.content
         soup = BeautifulSoup(content, 'html.parser')
-        word_count, filtered_words = analyze_text_content(content)
+        #word_count, filtered_words = analyze_text_content(content)
 
         for anchor in soup.find_all('a', href=True):
             href = anchor['href']
@@ -43,10 +46,13 @@ def extract_next_links(url, resp):
     except Exception as e:
         print(f"[extract_next_links] Error parsing {url}: {e}")
 
-
-
     return links
-    
+
+def analyze_text_content(content):
+    pass
+    #return tokenize(content,) 
+
+
 def is_trap(url, visited_urls=set(), path_counts={}, max_visits=30, max_depth=8):
     if url in visited_urls:
         return True
@@ -110,3 +116,94 @@ def is_valid(url):
     except TypeError:
         print ("TypeError for ", parsed)
         raise
+
+def normalized_word_frequencies_difference(dictA: dict[str, int], dictB: dict[str, int]) -> float:
+    '''
+    Takes two token frequency dictionaries for two pages, and similarity scores them (1 being the "same").
+    Compares the differences in word frequencies between the two dictionaries, and normalizes them by the total 
+    number of words to attempt to account for (potential) different document sizes.
+
+    Args:
+        dictA (dict[str,int]): token frequency map for document A
+        dictB (dict[str,int]): token frequency map for document B
+
+    Returns:
+        float: normalized difference between two documents (1 being the same) 
+    '''
+    ##NOTES: MIGHT NEED TO OPTIMIZE FOR LARGE DICTS 
+        #better data structures for storage ?
+        #stopword filtering? 
+    
+    num_words_a = sum(dictA.values())
+    num_words_b = sum(dictB.values())
+
+    #handle if both are empty, or either is empty 
+    if num_words_a == 0 and num_words_b == 0:
+        return 1.0
+    elif num_words_a == 0 or num_words_b == 0:
+        return 0.0 
+
+    all_words = set(dictA) | set(dictB)
+
+    #compute frequency of each word in its document, and compares frequencies between the 2 documents
+    differences = []
+    for word in all_words:
+        frequency_in_A = dictA.get(word, 0) / num_words_a
+        frequency_in_B = dictB.get(word, 0) / num_words_b
+        differences.append(abs(frequency_in_A - frequency_in_B))
+        
+    #sum differences in relative frequencies for all words --> gives percent similarity, with 1 being exactly the same
+    return (1 - sum(differences) / 2) 
+
+
+def tokenize(text: str) -> List[str]:
+    '''
+    Reads in a string and returns a list of tokens.
+    Valid tokens are sequences of alphanumeric chars, regardless of capitalization.
+
+    Args:
+        text (str): text string 
+    
+    Returns:
+        List[str]: list of tokens
+    '''
+    tokens = []
+    valid_chars = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
+    
+    token = ''
+    for char in text:
+        if char in valid_chars:
+            token += char
+        else:
+            if token != '':
+                tokens.append(token.lower())
+                token = ''
+    
+    #check for last token 
+    if token != '':
+        tokens.append(token.lower())
+
+    return tokens
+
+def computeWordFrequencies(token_list: List) -> dict[str, int]:
+    '''
+    Counts number of occurences of each token in the list.
+    Runtime Complexity: O(n), n being the number of tokens in the list 
+
+    Args:
+        token_list (List): list of cased tokens
+
+    Returns:
+        Dict[str, int]: dict of uncased tokens and their associated frequencies
+        
+    '''
+
+    dict_frequencies = {}
+    for token in token_list:
+        uncased_token = token.lower()
+        if uncased_token in dict_frequencies:
+            dict_frequencies[uncased_token] += 1
+        else:
+            dict_frequencies[uncased_token] = 1
+    
+    return dict_frequencies
