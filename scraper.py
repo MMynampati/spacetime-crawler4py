@@ -5,11 +5,14 @@ from collections import defaultdict
 from bs4 import BeautifulSoup
 from typing import List
 
-
 visited_urls = set()
 path_counts = defaultdict(int)
 param_counts = defaultdict(int)
 visited_pages_dicts = []
+longest_page = ""
+longest_page_word_count = 0
+all_word_freqs = defaultdict(int)
+subdomain_counts = defaultdict(int)
 
 def scraper(url, resp):
     if resp.status != 200 or not resp.raw_response:
@@ -18,24 +21,16 @@ def scraper(url, resp):
     defragged_url = urldefrag(resp.url)[0]
     if defragged_url in visited_urls:
         return []
-        
+
     visited_urls.add(defragged_url)
 
-    extract_text_and_stats(resp, defragged_url) 
-    
+    if process_page(resp):
+        analyze_text_content(resp, defragged_url)
+
     links = extract_next_links(url, resp)
     return [link for link in links if is_valid(link)]
 
 def extract_next_links(url, resp):
-    # Implementation required.
-    # url: the URL that was used to get the page
-    # resp.url: the actual url of the page
-    # resp.status: the status code returned by the server. 200 is OK, you got the page. Other numbers mean that there was some kind of problem.
-    # resp.error: when status is not 200, you can check the error here, if needed.
-    # resp.raw_response: this is where the page actually is. More specifically, the raw_response has two parts:
-    #         resp.raw_response.url: the url, again
-    #         resp.raw_response.content: the content of the page!
-    # Return a list with the hyperlinks (as strings) scrapped from resp.raw_response.content
     links = []
     if resp.status != 200 or resp.raw_response is None:
         return links
@@ -43,72 +38,139 @@ def extract_next_links(url, resp):
         content = resp.raw_response.content
         soup = BeautifulSoup(content, 'html.parser')
 
-        #check for dup/near-dup
         text_content = soup.get_text()
         tokens = tokenize(text_content)
-        freqs  = computeWordFrequencies(tokens)
-        
+        freqs = computeWordFrequencies(tokens)
+
         for freq_dict in visited_pages_dicts:
             score = normalized_word_frequencies_difference(freq_dict, freqs)
             if score >= 0.95:
                 print("found dup or near-dup")
                 return links
 
-        visited_pages_dicts.append(freqs)    
+        visited_pages_dicts.append(freqs)
 
-        #word_count, filtered_words = analyze_text_content(content)
-        
-       
         for anchor in soup.find_all('a', href=True):
             href = anchor['href']
-            full_url = urljoin(url, href) 
-            defragmented_url, _ = urldefrag(full_url)  
+            full_url = urljoin(url, href)
+            defragmented_url, _ = urldefrag(full_url)
             if is_trap(defragmented_url, visited_urls, path_counts):
                 continue
-
             links.append(defragmented_url)
-
 
     except Exception as e:
         print(f"[extract_next_links] Error parsing {url}: {e}")
 
     return links
 
+def analyze_text_content(resp, url):
+    global longest_page, longest_page_word_count, all_word_freqs, subdomain_counts
 
-def analyze_text_content(content):
-    pass
-    #return tokenize(content,) 
+    try:
+        content = resp.raw_response.content
+        soup = BeautifulSoup(content, 'html.parser')
+        text_content = soup.get_text()
+        tokens = tokenize(text_content)
+        word_count = len(tokens)
 
+        if word_count > longest_page_word_count:
+            longest_page = url
+            longest_page_word_count = word_count
+
+        word_freqs = computeWordFrequencies(tokens)
+        stop_words = get_stop_words()
+        filtered_word_freqs = {word: freq for word, freq in word_freqs.items()
+                               if word.lower() not in stop_words}
+
+        for word, freq in filtered_word_freqs.items():
+            all_word_freqs[word] += freq
+
+        parsed_url = urlparse(url)
+        subdomain = parsed_url.netloc
+        subdomain_counts[subdomain] += 1
+
+        return word_count, filtered_word_freqs, subdomain
+
+    except Exception as e:
+        print(f"Error analyzing content from {url}: {e}")
+        return 0, {}, ""
+
+def process_page(resp):
+    max_size = 1024 * 1024
+    min_text_ratio = 0.1
+    min_tokens = 100
+
+    try:
+        content = resp.raw_response.content
+        content_size = len(content)
+
+        if content_size > max_size:
+            print(f"Skipping large file: {resp.url} ({content_size} bytes)")
+            return False
+
+        soup = BeautifulSoup(content, 'html.parser')
+        text_content = soup.get_text()
+        text_size = len(text_content)
+        text_ratio = text_size / content_size if content_size > 0 else 0
+        tokens = tokenize(text_content)
+        token_count = len(tokens)
+
+        if text_ratio < min_text_ratio or token_count < min_tokens:
+            print(f"Skipping low information page: {resp.url} (ratio: {text_ratio:.2f}, tokens: {token_count})")
+            return False
+
+        return True
+
+    except Exception as e:
+        print(f"Error checking page quality: {e}")
+        return True
 
 def is_trap(url, visited_urls=set(), path_counts={}, max_visits=30, max_depth=8):
     if url in visited_urls:
         return True
-    visited_urls.add(url)
+
     parsed = urlparse(url)
     segments = [s for s in parsed.path.split('/') if s]
 
     if len(segments) > max_depth:
         return True
 
-    # Normalize numeric parts to catch /page/1, /page/2
     simplified = '/'.join(['N' if s.isdigit() else s for s in segments])
     path_counts[simplified] = path_counts.get(simplified, 0) + 1
     if path_counts[simplified] > max_visits:
         return True
 
     return False
-    
-    
+
+def get_stop_words():
+    return {
+        "a", "about", "above", "after", "again", "against", "all", "am", "an", "and",
+        "any", "are", "aren't", "as", "at", "be", "because", "been", "before", "being",
+        "below", "between", "both", "but", "by", "can't", "cannot", "could", "couldn't",
+        "did", "didn't", "do", "does", "doesn't", "doing", "don't", "down", "during",
+        "each", "few", "for", "from", "further", "had", "hadn't", "has", "hasn't",
+        "have", "haven't", "having", "he", "he'd", "he'll", "he's", "her", "here",
+        "here's", "hers", "herself", "him", "himself", "his", "how", "how's", "i",
+        "i'd", "i'll", "i'm", "i've", "if", "in", "into", "is", "isn't", "it", "it's",
+        "its", "itself", "let's", "me", "more", "most", "mustn't", "my", "myself", "no",
+        "nor", "not", "of", "off", "on", "once", "only", "or", "other", "ought", "our",
+        "ours", "ourselves", "out", "over", "own", "same", "shan't", "she", "she'd",
+        "she'll", "she's", "should", "shouldn't", "so", "some", "such", "than", "that",
+        "that's", "the", "their", "theirs", "them", "themselves", "then", "there",
+        "there's", "these", "they", "they'd", "they'll", "they're", "they've", "this",
+        "those", "through", "to", "too", "under", "until", "up", "very", "was", "wasn't",
+        "we", "we'd", "we'll", "we're", "we've", "were", "weren't", "what", "what's",
+        "when", "when's", "where", "where's", "which", "while", "who", "who's", "whom",
+        "why", "why's", "with", "won't", "would", "wouldn't", "you", "you'd", "you'll",
+        "you're", "you've", "your", "yours", "yourself", "yourselves"
+    }
+
 def is_valid(url):
-    # Decide whether to crawl this url or not. 
-    # If you decide to crawl it, return True; otherwise return False.
-    # There are already some conditions that return False.
     try:
         parsed = urlparse(url)
-        if parsed.scheme not in set(["http", "https"]):
+        if parsed.scheme not in {"http", "https"}:
             return False
-            
-        # Check if the URL is within the domains we want to crawl
+
         allowed_domains = [
             ".ics.uci.edu",
             ".cs.uci.edu",
@@ -116,19 +178,18 @@ def is_valid(url):
             ".stat.uci.edu",
             "today.uci.edu/department/information_computer_sciences"
         ]
-        
+
         is_allowed = any(parsed.netloc.endswith(domain) for domain in allowed_domains)
-        
+
         if not is_allowed and parsed.netloc == "today.uci.edu":
             if "/department/information_computer_sciences" in parsed.path:
                 is_allowed = True
-                
+
         if not is_allowed:
             return False
-            
+
         if len(url) > 200:
             return False
-
 
         return not re.match(
             r".*\.(css|js|bmp|gif|jpe?g|ico"
@@ -138,65 +199,36 @@ def is_valid(url):
             + r"|data|dat|exe|bz2|tar|msi|bin|7z|psd|dmg|iso"
             + r"|epub|dll|cnf|tgz|sha1"
             + r"|thmx|mso|arff|rtf|jar|csv"
-            + r"|rm|smil|wmv|swf|wma|zip|rar|gz)$", parsed.path.lower())
+            + r"|rm|smil|wmv|swf|wma|zip|rar|gz)$", parsed.path.lower()
+        )
 
     except TypeError:
-        print ("TypeError for ", parsed)
+        print("TypeError for ", parsed)
         raise
 
 def normalized_word_frequencies_difference(dictA: dict[str, int], dictB: dict[str, int]) -> float:
-    '''
-    Takes two token frequency dictionaries for two pages, and similarity scores them (1 being the "same").
-    Compares the differences in word frequencies between the two dictionaries, and normalizes them by the total 
-    number of words to attempt to account for (potential) different document sizes.
-
-    Args:
-        dictA (dict[str,int]): token frequency map for document A
-        dictB (dict[str,int]): token frequency map for document B
-
-    Returns:
-        float: normalized difference between two documents (1 being the same) 
-    '''
-    ##NOTES: MIGHT NEED TO OPTIMIZE FOR LARGE DICTS 
-        #better data structures for storage ?
-        #stopword filtering? 
-    
     num_words_a = sum(dictA.values())
     num_words_b = sum(dictB.values())
 
-    #handle if both are empty, or either is empty 
     if num_words_a == 0 and num_words_b == 0:
         return 1.0
     elif num_words_a == 0 or num_words_b == 0:
-        return 0.0 
+        return 0.0
 
     all_words = set(dictA) | set(dictB)
 
-    #compute frequency of each word in its document, and compares frequencies between the 2 documents
     differences = []
     for word in all_words:
         frequency_in_A = dictA.get(word, 0) / num_words_a
         frequency_in_B = dictB.get(word, 0) / num_words_b
         differences.append(abs(frequency_in_A - frequency_in_B))
-        
-    #sum differences in relative frequencies for all words --> gives percent similarity, with 1 being exactly the same
-    return (1 - sum(differences) / 2) 
 
+    return (1 - sum(differences) / 2)
 
 def tokenize(text: str) -> List[str]:
-    '''
-    Reads in a string and returns a list of tokens.
-    Valid tokens are sequences of alphanumeric chars, regardless of capitalization.
-
-    Args:
-        text (str): text string 
-    
-    Returns:
-        List[str]: list of tokens
-    '''
     tokens = []
     valid_chars = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
-    
+
     token = ''
     for char in text:
         if char in valid_chars:
@@ -205,26 +237,13 @@ def tokenize(text: str) -> List[str]:
             if token != '':
                 tokens.append(token.lower())
                 token = ''
-    
-    #check for last token 
+
     if token != '':
         tokens.append(token.lower())
 
     return tokens
 
 def computeWordFrequencies(token_list: List) -> dict[str, int]:
-    '''
-    Counts number of occurences of each token in the list.
-    Runtime Complexity: O(n), n being the number of tokens in the list 
-
-    Args:
-        token_list (List): list of cased tokens
-
-    Returns:
-        Dict[str, int]: dict of uncased tokens and their associated frequencies
-        
-    '''
-
     dict_frequencies = {}
     for token in token_list:
         uncased_token = token.lower()
@@ -232,5 +251,28 @@ def computeWordFrequencies(token_list: List) -> dict[str, int]:
             dict_frequencies[uncased_token] += 1
         else:
             dict_frequencies[uncased_token] = 1
-    
     return dict_frequencies
+
+def count_unique_pages_and_subdomains():
+    unique_page_count = len(visited_urls)
+    return unique_page_count, subdomain_counts
+
+def print_report():
+    global longest_page, longest_page_word_count, all_word_freqs
+    unique_page_count, subdomain_data = count_unique_pages_and_subdomains()
+
+    sorted_words = sorted(all_word_freqs.items(), key=lambda x: x[1], reverse=True)
+    common_words = sorted_words[:50]
+
+    print("\n----- CRAWLER REPORT -----\n")
+    print(f"Total unique pages found: {unique_page_count}")
+    print(f"\nLongest page: {longest_page}")
+    print(f"Word count: {longest_page_word_count}")
+
+    print("\nTop 50 most common words:")
+    for word, freq in common_words:
+        print(f"{word}: {freq}")
+
+    print("\nSubdomains found:")
+    for subdomain, count in subdomain_data.items():
+        print(f"{subdomain}, {count}")
