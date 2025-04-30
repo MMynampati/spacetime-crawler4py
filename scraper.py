@@ -20,12 +20,15 @@ def scraper(url, resp):
 
     defragged_url = urldefrag(resp.url)[0]
     if defragged_url in visited_urls:
+        print("mistake - added duplicate site to frontier")
         return []
 
     visited_urls.add(defragged_url)
 
     if process_page(resp):
         analyze_text_content(resp, defragged_url)
+    else:
+        return []
 
     links = extract_next_links(url, resp)
     return [link for link in links if is_valid(link)]
@@ -44,7 +47,7 @@ def extract_next_links(url, resp):
 
         for freq_dict in visited_pages_dicts:
             score = normalized_word_frequencies_difference(freq_dict, freqs)
-            if score >= 0.95:
+            if score >= 0.94:
                 print("found dup or near-dup")
                 return links
 
@@ -88,7 +91,6 @@ def analyze_text_content(resp, url):
         parsed_url = urlparse(url)
         subdomain = parsed_url.netloc
         subdomain_counts[subdomain] += 1
-
         return word_count, filtered_word_freqs, subdomain
 
     except Exception as e:
@@ -103,6 +105,14 @@ def process_page(resp):
     try:
         content = resp.raw_response.content
         content_size = len(content)
+        
+        #content = ""
+        #content_size = 0
+        #if resp.raw_response.headers['Content-Length']:
+        #    content_size = int(resp.raw_response.headers['Content-Length'])
+        #else:
+        #    content = resp.raw_response.content
+        #    content_size = len(content)
 
         if content_size > max_size:
             print(f"Skipping large file: {resp.url} ({content_size} bytes)")
@@ -118,7 +128,7 @@ def process_page(resp):
         if text_ratio < min_text_ratio or token_count < min_tokens:
             print(f"Skipping low information page: {resp.url} (ratio: {text_ratio:.2f}, tokens: {token_count})")
             return False
-
+        
         return True
 
     except Exception as e:
