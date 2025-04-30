@@ -4,11 +4,12 @@ from urllib import robotparser
 from collections import defaultdict
 from bs4 import BeautifulSoup
 from typing import List
+import hashlib
 
 visited_urls = set()
 path_counts = defaultdict(int)
 param_counts = defaultdict(int)
-visited_pages_dicts = []
+visited_page_hashes = set()
 longest_page = ""
 longest_page_word_count = 0
 all_word_freqs = defaultdict(int)
@@ -27,9 +28,7 @@ def scraper(url, resp):
 
     if process_page(resp):
         analyze_text_content(resp, defragged_url)
-    else:
-        return []
-
+        
     links = extract_next_links(url, resp)
     return [link for link in links if is_valid(link)]
 
@@ -43,15 +42,20 @@ def extract_next_links(url, resp):
 
         text_content = soup.get_text()
         tokens = tokenize(text_content)
-        freqs = computeWordFrequencies(tokens)
+        freqs_vector = hash_word_frequencies(tokens, 1024)   #can increase size of vocab if too many collisions
+        freqs_vector = tuple(freqs_vector)
 
-        for freq_dict in visited_pages_dicts:
-            score = normalized_word_frequencies_difference(freq_dict, freqs)
-            if score >= 0.94:
-                print("found dup or near-dup")
-                return links
+        if freqs_vector in visited_page_hashes:
+            print("duplicate detected")
+            return links
 
-        visited_pages_dicts.append(freqs)
+       # for page_hash in visited_page_hashes:
+       #     score = hashed_frequencies_difference(freqs_vector, page_hash, 1024)
+       #     if score >= 0.95:
+       #         print("found dup or near-dup")
+       #         return links
+
+        visited_page_hashes.add(freqs_vector)
 
         for anchor in soup.find_all('a', href=True):
             href = anchor['href']
@@ -63,7 +67,7 @@ def extract_next_links(url, resp):
 
     except Exception as e:
         print(f"[extract_next_links] Error parsing {url}: {e}")
-
+    print(f'(found links): {links}')
     return links
 
 def analyze_text_content(resp, url):
@@ -189,6 +193,10 @@ def is_valid(url):
             "today.uci.edu/department/information_computer_sciences"
         ]
 
+        blocked_paths = [
+            "/doku.php"
+        ]
+            
         is_allowed = any(parsed.netloc.endswith(domain) for domain in allowed_domains)
 
         if not is_allowed and parsed.netloc == "today.uci.edu":
@@ -197,6 +205,14 @@ def is_valid(url):
 
         if not is_allowed:
             return False
+        
+        if "/~seal/projects" in parsed.path:
+            print(f"Blocked a url under /~seal/projects")
+
+        for blocked in blocked_paths:
+            if parsed.path.startswith(blocked):
+                print(f'Blocked a url under {blocked} path')
+                return False
 
         if len(url) > 200:
             return False
@@ -216,25 +232,52 @@ def is_valid(url):
         print("TypeError for ", parsed)
         raise
 
-def normalized_word_frequencies_difference(dictA: dict[str, int], dictB: dict[str, int]) -> float:
-    num_words_a = sum(dictA.values())
-    num_words_b = sum(dictB.values())
+def hashed_frequencies_difference(vecA: list[float], vecB: list[float], size: int) -> float:
+    '''
+    Takes two token frequency vectors for two pages, and similarity scores them (1 being the "same").
 
+    Args:
+        vecA (list[float]): token frequency list for document A
+        vecB (list[float]): token frequency list for document B
+        size (int): size of vector
+
+    Returns:
+        float: normalized difference between two documents (1 being the same) 
+    '''    
+    num_words_a = sum(vecA)
+    num_words_b = sum(vecB)
+
+    #handle if both are empty, or either is empty 
     if num_words_a == 0 and num_words_b == 0:
         return 1.0
     elif num_words_a == 0 or num_words_b == 0:
-        return 0.0
+        return 0.0 
 
-    all_words = set(dictA) | set(dictB)
-
+    #compute frequency of each word in its document, and compares frequencies between the 2 documents
     differences = []
-    for word in all_words:
-        frequency_in_A = dictA.get(word, 0) / num_words_a
-        frequency_in_B = dictB.get(word, 0) / num_words_b
-        differences.append(abs(frequency_in_A - frequency_in_B))
+    for item in range(size):
+        freqA = vecA[item] / num_words_a
+        freqB = vecB[item] / num_words_b
+        differences.append(abs(freqA - freqB))
+        
+    #sum differences in relative frequencies for all words --> gives percent similarity, with 1 being exactly the same
+    return 1 - (sum(differences) / 2) 
 
-    return (1 - sum(differences) / 2)
-
+def hash_word_frequencies(tokens: List[str], size: int=1024) -> list[float]:
+    '''
+    Cleans up token list, hashes them, and increments list[token] to represent token frequencies.
+    '''
+    stopwords = get_stop_words()
+    
+    list_freqs = [0.0] * size
+    for token in tokens:
+        if token not in stopwords:
+            hash_bytes = hashlib.sha1(token.encode('utf-8')).digest()
+            hash_int = int.from_bytes(hash_bytes[:4], byteorder='big')
+            hashed_token_index = hash_int % size
+            list_freqs[hashed_token_index] += 1
+    return list_freqs
+            
 def tokenize(text: str) -> List[str]:
     tokens = []
     valid_chars = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
