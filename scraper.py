@@ -32,12 +32,19 @@ def scraper(url, resp):
     except Exception as e:
         print(f"Error creating soup for {url}: {e}")
         return []
+    
+    if len(visited_urls) <= 5:
+        analyze_text_content(resp, defragged_url, soup)
+        links = extract_next_links(url, resp, soup)
+        return [link for link in links if is_valid(link)]
 
     if process_page(resp, soup):
         analyze_text_content(resp, defragged_url, soup)
-        
-    links = extract_next_links(url, resp, soup)
-    return [link for link in links if is_valid(link)]
+        links = extract_next_links(url, resp, soup)
+        return [link for link in links if is_valid(link)]
+    
+    return []
+
 
 def extract_next_links(url, resp, soup):
     links = []
@@ -222,7 +229,7 @@ def is_valid(url):
 
         return not re.match(
             r".*\.(css|js|bmp|gif|jpe?g|ico"
-            + r"|png|tiff?|mid|mp2|mp3|mp4"
+            + r"|png|tiff?|mid|mp2|mp3|mp4|mpg"
             + r"|wav|avi|mov|mpeg|ram|m4v|mkv|ogg|ogv|pdf"
             + r"|ps|eps|tex|ppt|pptx|doc|docx|xls|xlsx|names"
             + r"|data|dat|exe|bz2|tar|msi|bin|7z|psd|dmg|iso"
