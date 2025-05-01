@@ -18,6 +18,14 @@ subdomain_counts = defaultdict(int)
 def scraper(url, resp):
     if resp.status != 200 or not resp.raw_response:
         return []
+    try: 
+        if resp.raw_response.headers['Content-Type'] != 'text/html':
+            print("caught a non html file")
+            return []
+    except:
+        print("headers fucked up")
+        return []
+
 
     defragged_url = urldefrag(resp.url)[0]
     if defragged_url in visited_urls:
@@ -113,7 +121,7 @@ def analyze_text_content(resp, url, soup):
 
 def process_page(resp, soup):
     max_size = 1024 * 1024
-    min_text_ratio = 0.1
+    min_text_ratio = 0.05
     min_tokens = 100
 
     try:
@@ -201,9 +209,13 @@ def is_valid(url):
             ".stat.uci.edu",
             "today.uci.edu/department/information_computer_sciences"
         ]
+        blocked_domains = [
+            "sli.ics.uci.edu",
+        ]
 
         blocked_paths = [
             "/doku.php"
+            "/~seal/projects"
         ]
             
         is_allowed = any(parsed.netloc.endswith(domain) for domain in allowed_domains)
@@ -215,10 +227,17 @@ def is_valid(url):
         if not is_allowed:
             return False
         
-        if "/~seal/projects" in parsed.path:
-            print(f"Blocked a url under /~seal/projects")
-            return False
-        
+
+       # if "/~seal/projects" in parsed.path:
+       #     print(f"Blocked a url under /~seal/projects")
+       #     return False
+       
+        for blocked in blocked_domains:
+            if parsed.netloc.endswith(blocked):
+                print(f'Blocked a url under {blocked} subdomain')
+                return False
+
+
         for blocked in blocked_paths:
             if parsed.path.startswith(blocked):
                 print(f'Blocked a url under {blocked} path')
