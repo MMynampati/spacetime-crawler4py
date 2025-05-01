@@ -26,20 +26,25 @@ def scraper(url, resp):
 
     visited_urls.add(defragged_url)
 
-    if process_page(resp):
-        analyze_text_content(resp, defragged_url)
-        
-    links = extract_next_links(url, resp)
-    return [link for link in links if is_valid(link)]
-
-def extract_next_links(url, resp):
-    links = []
-    if resp.status != 200 or resp.raw_response is None:
-        return links
     try:
         content = resp.raw_response.content
         soup = BeautifulSoup(content, 'html.parser')
+    except Exception as e:
+        print(f"Error creating soup for {url}: {e}")
+        return []
 
+    if process_page(resp, soup):
+        analyze_text_content(resp, defragged_url, soup)
+        
+    links = extract_next_links(url, resp, soup)
+    return [link for link in links if is_valid(link)]
+
+def extract_next_links(url, resp, soup):
+    links = []
+    if resp.status != 200 or resp.raw_response is None:
+        return links
+        
+    try:
         text_content = soup.get_text()
         tokens = tokenize(text_content)
         freqs_vector = hash_word_frequencies(tokens, 1024)   #can increase size of vocab if too many collisions
@@ -67,15 +72,13 @@ def extract_next_links(url, resp):
 
     except Exception as e:
         print(f"[extract_next_links] Error parsing {url}: {e}")
-    print(f'(found links): {links}')
+    
     return links
 
-def analyze_text_content(resp, url):
+def analyze_text_content(resp, url, soup):
     global longest_page, longest_page_word_count, all_word_freqs, subdomain_counts
 
     try:
-        content = resp.raw_response.content
-        soup = BeautifulSoup(content, 'html.parser')
         text_content = soup.get_text()
         tokens = tokenize(text_content)
         word_count = len(tokens)
@@ -101,7 +104,7 @@ def analyze_text_content(resp, url):
         print(f"Error analyzing content from {url}: {e}")
         return 0, {}, ""
 
-def process_page(resp):
+def process_page(resp, soup):
     max_size = 1024 * 1024
     min_text_ratio = 0.1
     min_tokens = 100
@@ -122,7 +125,6 @@ def process_page(resp):
             print(f"Skipping large file: {resp.url} ({content_size} bytes)")
             return False
 
-        soup = BeautifulSoup(content, 'html.parser')
         text_content = soup.get_text()
         text_size = len(text_content)
         text_ratio = text_size / content_size if content_size > 0 else 0
@@ -208,7 +210,8 @@ def is_valid(url):
         
         if "/~seal/projects" in parsed.path:
             print(f"Blocked a url under /~seal/projects")
-
+            return False
+        
         for blocked in blocked_paths:
             if parsed.path.startswith(blocked):
                 print(f'Blocked a url under {blocked} path')
