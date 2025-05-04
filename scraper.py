@@ -345,6 +345,8 @@ def print_report():
 
     sorted_words = sorted(all_word_freqs.items(), key=lambda x: x[1], reverse=True)
     common_words = sorted_words[:50]
+    sorted_subdomains = sorted(subdomain_data.items(), key=lambda x: x[0])
+
 
     print("\n----- CRAWLER REPORT -----\n")
     print(f"Total unique pages found: {unique_page_count}")
