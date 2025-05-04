@@ -146,8 +146,8 @@ def process_page(resp, soup):
         tokens = tokenize(text_content)
         token_count = len(tokens)
 
-        if text_ratio < min_text_ratio or token_count < min_tokens:
-            print(f"Skipping low information page: {resp.url} (ratio: {text_ratio:.2f}, tokens: {token_count})")
+        if token_count < min_tokens:
+            print(f"Skipping low information page: {resp.url} (tokens: {token_count})")
             return False
         
         return True
