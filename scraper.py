@@ -19,8 +19,9 @@ def scraper(url, resp):
     if resp.status != 200 or not resp.raw_response:
         return []
     try: 
-        if resp.raw_response.headers['Content-Type'] != 'text/html':
+        if not resp.raw_response.headers['Content-Type'].startswith('text/html'):
             print("caught a non html file")
+            print(f'header: {resp.raw_response.headers["Content-Type"]}')
             return []
     except:
         print("headers fucked up")
@@ -44,6 +45,7 @@ def scraper(url, resp):
     if len(visited_urls) <= 5:
         analyze_text_content(resp, defragged_url, soup)
         links = extract_next_links(url, resp, soup)
+        print("got here")
         return [link for link in links if is_valid(link)]
 
     if process_page(resp, soup):
@@ -121,7 +123,7 @@ def analyze_text_content(resp, url, soup):
 
 def process_page(resp, soup):
     max_size = 1024 * 1024
-    min_text_ratio = 0.05
+    min_text_ratio = 0.02
     min_tokens = 100
 
     try:
@@ -214,7 +216,7 @@ def is_valid(url):
         ]
 
         blocked_paths = [
-            "/doku.php"
+            "/doku.php",
             "/~seal/projects"
         ]
             
