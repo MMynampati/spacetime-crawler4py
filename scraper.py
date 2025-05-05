@@ -148,8 +148,8 @@ def process_page(resp, soup):
         tokens = tokenize(text_content)
         token_count = len(tokens)
 
-        if text_ratio < min_text_ratio or token_count < min_tokens:
-            print(f"Skipping low information page: {resp.url} (ratio: {text_ratio:.2f}, tokens: {token_count})")
+        if token_count < min_tokens:
+            print(f"Skipping low information page: tokens: {token_count})")
             return False
         
         return True
@@ -349,7 +349,7 @@ def print_report():
     common_words = sorted_words[:50]
     sorted_subdomains = sorted(subdomain_data.items(), key=lambda x: x[0])
 
-    print("\n----- CRAWLER REPORT -----\n")
+    print("\n CRAWLER REPORT \n")
     print(f"Total unique pages found: {unique_page_count}")
     print(f"\nLongest page: {longest_page}")
     print(f"Word count: {longest_page_word_count}")
