@@ -1,0 +1,92 @@
+ CRAWLER REPORT 
+
+Total unique pages found: 6886
+
+Longest page: http://www.ics.uci.edu/~eppstein/junkyard/all.html
+Word count: 24367
+
+Top 50 most common words:
+s: 29719
+research: 22989
+2021: 20670
+2022: 17578
+2018: 16357
+2020: 14967
+student: 14670
+software: 14553
+2023: 14101
+events: 13540
+2019: 13138
+d: 12658
+computer: 12233
+1: 11808
+may: 11618
+information: 11547
+engineering: 11279
+data: 11123
+2017: 11084
+2016: 10882
+students: 10859
+2015: 10840
+b: 10424
+informatics: 10364
+uci: 10325
+graduate: 10035
+will: 10010
+april: 9820
+undergraduate: 9766
+can: 9578
+june: 9213
+2: 9185
+markellekelly: 9135
+july: 8994
+ph: 8943
+september: 8932
+department: 8720
+march: 8435
+m: 8432
+january: 8395
+february: 8299
+november: 8283
+october: 8176
+news: 8079
+december: 8045
+august: 8034
+html: 7987
+design: 7964
+courses: 7793
+projects: 7754
+
+Subdomains found:
+accessibility.ics.uci.edu, 4
+acoi.ics.uci.edu, 73
+archive.ics.uci.edu, 36
+cml.ics.uci.edu, 166
+code.ics.uci.edu, 13
+courselisting.ics.uci.edu, 4
+create.ics.uci.edu, 5
+cs.ics.uci.edu, 9
+datalab.ics.uci.edu, 1
+dgillen.ics.uci.edu, 5
+fr.ics.uci.edu, 1
+futurehealth.ics.uci.edu, 80
+grape.ics.uci.edu, 209
+hai.ics.uci.edu, 5
+hpi.ics.uci.edu, 2
+isg.ics.uci.edu, 283
+mailman.ics.uci.edu, 28
+mds.ics.uci.edu, 8
+mhcid.ics.uci.edu, 18
+mswe.ics.uci.edu, 10
+nalini.ics.uci.edu, 2
+ngs.ics.uci.edu, 1298
+sdcl.ics.uci.edu, 20
+seal.ics.uci.edu, 1
+statconsulting.ics.uci.edu, 3
+transformativeplay.ics.uci.edu, 40
+vision.ics.uci.edu, 7
+wics.ics.uci.edu, 1048
+www.cs.uci.edu, 4
+www.ics.uci.edu, 1463
+www.informatics.uci.edu, 1025
+www.stat.uci.edu, 262

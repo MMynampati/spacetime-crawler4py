@@ -23,8 +23,8 @@ def scraper(url, resp):
             print("caught a non html file")
             print(f'header: {resp.raw_response.headers["Content-Type"]}')
             return []
-    except:
-        print("headers fucked up")
+    except Exception as e:
+        print(f"Error filtering for html pages {url}: {e}")
         return []
 
 
@@ -45,7 +45,6 @@ def scraper(url, resp):
     if len(visited_urls) <= 5:
         analyze_text_content(resp, defragged_url, soup)
         links = extract_next_links(url, resp, soup)
-        print("got here")
         return [link for link in links if is_valid(link)]
 
     if process_page(resp, soup):
@@ -64,18 +63,18 @@ def extract_next_links(url, resp, soup):
     try:
         text_content = soup.get_text()
         tokens = tokenize(text_content)
-        freqs_vector = hash_word_frequencies(tokens, 1024)   #can increase size of vocab if too many collisions
+        freqs_vector = hash_word_frequencies(tokens, 8192)   #can increase size of vocab if too many collisions
         freqs_vector = tuple(freqs_vector)
 
         if freqs_vector in visited_page_hashes:
             print("duplicate detected")
             return links
 
-       # for page_hash in visited_page_hashes:
-       #     score = hashed_frequencies_difference(freqs_vector, page_hash, 1024)
-       #     if score >= 0.95:
-       #         print("found dup or near-dup")
-       #         return links
+        for page_hash in visited_page_hashes:
+            score = hashed_frequencies_difference(freqs_vector, page_hash, 8192)
+            if score >= 0.97:                              #can adjust this threshold
+                print("found dup or near-dup")
+                return links
 
         visited_page_hashes.add(freqs_vector)
 
@@ -294,7 +293,7 @@ def hashed_frequencies_difference(vecA: list[float], vecB: list[float], size: in
     #sum differences in relative frequencies for all words --> gives percent similarity, with 1 being exactly the same
     return 1 - (sum(differences) / 2) 
 
-def hash_word_frequencies(tokens: List[str], size: int=1024) -> list[float]:
+def hash_word_frequencies(tokens: List[str], size: int=8192) -> list[float]:
     '''
     Cleans up token list, hashes them, and increments list[token] to represent token frequencies.
     '''
@@ -359,5 +358,5 @@ def print_report():
         print(f"{word}: {freq}")
 
     print("\nSubdomains found:")
-    for subdomain, count in subdomain_data.items():
+    for subdomain, count in sorted_subdomains:
         print(f"{subdomain}, {count}")
