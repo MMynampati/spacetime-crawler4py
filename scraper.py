@@ -72,7 +72,7 @@ def extract_next_links(url, resp, soup):
 
         for page_hash in visited_page_hashes:
             score = hashed_frequencies_difference(freqs_vector, page_hash, 4096)
-            if score >= 0.97:                              #can adjust this threshold
+            if score >= 0.99:                              #can adjust this threshold
                 print("found dup or near-dup")
                 return links
 
