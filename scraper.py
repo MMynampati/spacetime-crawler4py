@@ -157,7 +157,7 @@ def process_page(resp, soup):
         print(f"Error checking page quality: {e}")
         return True
 
-def is_trap(url, visited_urls=set(), path_counts={}, max_visits=30, max_depth=8):
+def is_trap(url, visited_urls=set(), path_counts={}, max_visits=50, max_depth=10):
     if url in visited_urls:
         return True
 
