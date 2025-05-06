@@ -1,0 +1,70 @@
+
+ CRAWLER REPORT 
+Total unique pages found: 2760
+
+Longest page: http://www.ics.uci.edu/%7Ewscacchi/Papers/Vintage/Software_Productivity.html
+Word count: 15631
+
+Top 50 most common words:
+s: 17418
+research: 12313
+2018: 12216
+2019: 10796
+2021: 10318
+2020: 10141
+software: 10075
+student: 9708
+2022: 9416
+2023: 9412
+2017: 9407
+2016: 9337
+2015: 9154
+may: 8027
+events: 7800
+june: 7699
+engineering: 7676
+september: 7637
+july: 7569
+informatics: 7383
+april: 7310
+undergraduate: 7019
+march: 6961
+february: 6909
+november: 6905
+january: 6898
+graduate: 6885
+b: 6819
+december: 6800
+august: 6741
+october: 6236
+d: 6161
+department: 5842
+computer: 5683
+ph: 5641
+design: 4840
+students: 4767
+2014: 4736
+information: 4662
+profiles: 4659
+uci: 4617
+m: 4381
+wics: 4169
+projects: 4161
+game: 4139
+process: 4097
+support: 4036
+news: 3775
+us: 3707
+ics: 3675
+
+Subdomains found:
+courselisting.ics.uci.edu, 2
+create.ics.uci.edu, 5
+futurehealth.ics.uci.edu, 110
+hai.ics.uci.edu, 5
+transformativeplay.ics.uci.edu, 38
+vision.ics.uci.edu, 7
+wics.ics.uci.edu, 732
+www.ics.uci.edu, 321
+www.informatics.uci.edu, 772
+www.stat.uci.edu, 113

@@ -121,7 +121,7 @@ def analyze_text_content(resp, url, soup):
         return 0, {}, ""
 
 def process_page(resp, soup):
-    max_size = 1024 * 1024
+    max_size = 1024 * 1024 * 3          #3 MB 
     min_text_ratio = 0.02
     min_tokens = 80
 
