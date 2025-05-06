@@ -142,8 +142,8 @@ def process_page(resp, soup):
             return False
 
         text_content = soup.get_text()
-        text_size = len(text_content)
-        text_ratio = text_size / content_size if content_size > 0 else 0
+        #text_size = len(text_content)
+        #text_ratio = text_size / content_size if content_size > 0 else 0
         tokens = tokenize(text_content)
         token_count = len(tokens)
 
