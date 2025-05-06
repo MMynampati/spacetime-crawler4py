@@ -123,7 +123,7 @@ def analyze_text_content(resp, url, soup):
 def process_page(resp, soup):
     max_size = 1024 * 1024
     min_text_ratio = 0.02
-    min_tokens = 100
+    min_tokens = 80
 
     try:
         content = resp.raw_response.content
