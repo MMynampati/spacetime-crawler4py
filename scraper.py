@@ -63,7 +63,7 @@ def extract_next_links(url, resp, soup):
     try:
         text_content = soup.get_text()
         tokens = tokenize(text_content)
-        freqs_vector = hash_word_frequencies(tokens, 8192)   #can increase size of vocab if too many collisions
+        freqs_vector = hash_word_frequencies(tokens, 4096)   #can increase size of vocab if too many collisions
         freqs_vector = tuple(freqs_vector)
 
         if freqs_vector in visited_page_hashes:
@@ -71,7 +71,7 @@ def extract_next_links(url, resp, soup):
             return links
 
         for page_hash in visited_page_hashes:
-            score = hashed_frequencies_difference(freqs_vector, page_hash, 8192)
+            score = hashed_frequencies_difference(freqs_vector, page_hash, 4096)
             if score >= 0.97:                              #can adjust this threshold
                 print("found dup or near-dup")
                 return links
@@ -293,7 +293,7 @@ def hashed_frequencies_difference(vecA: list[float], vecB: list[float], size: in
     #sum differences in relative frequencies for all words --> gives percent similarity, with 1 being exactly the same
     return 1 - (sum(differences) / 2) 
 
-def hash_word_frequencies(tokens: List[str], size: int=8192) -> list[float]:
+def hash_word_frequencies(tokens: List[str], size: int=4096) -> list[float]:
     '''
     Cleans up token list, hashes them, and increments list[token] to represent token frequencies.
     '''
