@@ -348,6 +348,24 @@ def print_report():
     common_words = sorted_words[:50]
     sorted_subdomains = sorted(subdomain_data.items(), key=lambda x: x[0])
 
+    try: 
+        with open("report.txt", "w", encoding="utf-8") as f:
+            f.write("\n CRAWLER REPORT \n")
+            f.write(f"Total unique pages found: {unique_page_count}\n")
+            f.write(f"\nLongest page: {longest_page}\n")
+            f.write(f"Word count: {longest_page_word_count}\n")
+        
+            f.write("\nTop 50 most common words:\n")
+            for word, freq in common_words:
+                f.write(f"{word}: {freq}\n")
+        
+            f.write("\nSubdomains found:\n")
+            for subdomain, count in sorted_subdomains:
+                f.write(f"{subdomain}, {count}\n")
+
+    except Exception as e: 
+        print(f"Error writing report: {e}")
+
     print("\n CRAWLER REPORT \n")
     print(f"Total unique pages found: {unique_page_count}")
     print(f"\nLongest page: {longest_page}")
