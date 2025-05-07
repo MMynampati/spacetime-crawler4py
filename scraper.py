@@ -169,12 +169,26 @@ def is_trap(url, visited_urls=set(), path_counts={}, max_visits=50, max_depth=10
 
     if len(segments) > max_depth:
         return True
-
-    simplified = '/'.join(['N' if s.isdigit() else s for s in segments])
-    path_counts[simplified] = path_counts.get(simplified, 0) + 1
-    if path_counts[simplified] > max_visits:
+        
+    simplified = []
+    for segment in segments:
+        if segment.isdigit():
+            simplified.append('N')
+        # Check for date patterns (YYYY-MM-DD)
+        elif re.match(r'\d{4}-\d{1,2}-\d{1,2}', segment):
+            simplified.append('DATE')
+        # Check for other date formats
+        elif re.match(r'\d{1,2}-\d{1,2}-\d{4}', segment) or re.match(r'\d{1,2}/\d{1,2}/\d{4}', segment):
+            simplified.append('DATE')
+        else:
+            simplified.append(segment)
+    
+    simplified_path = '/'.join(simplified)
+    path_counts[simplified_path] = path_counts.get(simplified_path, 0) + 1
+    
+    if path_counts[simplified_path] > max_visits:
         return True
-
+        
     return False
 
 def get_stop_words():
