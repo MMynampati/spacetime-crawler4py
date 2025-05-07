@@ -97,24 +97,27 @@ def analyze_text_content(resp, url, soup):
     try:
         text_content = soup.get_text()
         tokens = tokenize(text_content)
-        word_count = len(tokens)
+        stop_words = get_stop_words()
+
+        filtered_tokens = [
+            token for token in tokens
+            if token not in stop_words and len(token) > 1 and not token.isdigit()
+        ]
+        word_count = len(filtered_tokens)
 
         if word_count > longest_page_word_count:
             longest_page = url
             longest_page_word_count = word_count
 
-        word_freqs = computeWordFrequencies(tokens)
-        stop_words = get_stop_words()
-        filtered_word_freqs = {word: freq for word, freq in word_freqs.items()
-                               if word.lower() not in stop_words}
+        word_freqs = computeWordFrequencies(filtered_tokens)
 
-        for word, freq in filtered_word_freqs.items():
+        for word, freq in word_freqs.items():
             all_word_freqs[word] += freq
 
         parsed_url = urlparse(url)
         subdomain = parsed_url.netloc
         subdomain_counts[subdomain] += 1
-        return word_count, filtered_word_freqs, subdomain
+        return word_count, word_freqs, subdomain
 
     except Exception as e:
         print(f"Error analyzing content from {url}: {e}")
